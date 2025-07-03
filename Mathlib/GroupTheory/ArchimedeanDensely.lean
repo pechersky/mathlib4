@@ -79,6 +79,11 @@ instance : Fintype (ℤ ≃+ ℤ) where
     obtain rfl | rfl := Int.addEquiv_eq_refl_or_neg x <;>
     simp
 
+@[simp]
+lemma Int.univ_addEquiv :
+    (Finset.univ : Finset (ℤ ≃+ ℤ)) = .cons (.neg ℤ) {.refl ℤ} (by simp [AddEquiv.ext_int_iff]) :=
+  rfl
+
 instance : Unique (ℤ ≃+o ℤ) where
   uniq e := OrderAddMonoidIso.toAddEquiv_injective <|
     Int.addEquiv_eq_refl_or_neg e |>.resolve_right fun H => by

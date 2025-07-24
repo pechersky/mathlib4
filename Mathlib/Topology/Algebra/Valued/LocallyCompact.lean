@@ -122,48 +122,70 @@ lemma finite_quotient_maximalIdeal_pow_of_finite_residueField [IsDiscreteValuati
         (IsDiscreteValuationRing.not_a_field _) n).trans
         (Ideal.powQuotPowSuccEquivMapMkPowSuccPow _ n))
 
-open scoped Valued
-lemma totallyBounded_iff_finite_residueField [(Valued.v : Valuation K Γ₀).RankOne]
+lemma finite_residueField_of_totallyBounded_of_isDiscreteValuationRing
+    [IsDiscreteValuationRing 𝒪[K]] (H : TotallyBounded (Set.univ (α := 𝒪[K]))) :
+    Finite 𝓀[K] := by
+  have hb : (uniformity 𝒪[K]).HasBasis (fun _ ↦ True)
+      fun γ : Γ₀ˣ => { p : 𝒪[K] × 𝒪[K] | v (p.2 - p.1 : K) < (γ : Γ₀) } := by
+    rw [uniformity_subtype]
+    exact (hasBasis_uniformity _ _).comap _
+  obtain ⟨p, hp⟩ := IsDiscreteValuationRing.exists_irreducible 𝒪[K]
+  rw [totallyBounded_iff_subset] at H
+  specialize H {rs : 𝒪[K] × 𝒪[K] | v (rs.2 - rs.1 : K) < Units.mk0 (v (p : K))
+    (by simp [hp.ne_zero])} (hb.mem_of_mem trivial)
+  simp only [Set.subset_univ, Set.univ_subset_iff, true_and] at H
+  obtain ⟨t, ht, ht'⟩ := H
+  rw [← Set.finite_univ_iff]
+  refine (ht.image (IsLocalRing.residue _)).subset ?_
+  rintro ⟨x⟩
+  replace ht' := ht'.ge (Set.mem_univ x)
+  simp only [Set.mem_iUnion, exists_prop] at ht'
+  obtain ⟨y, hy, hy'⟩ := ht'
+  simp only [Submodule.Quotient.quot_mk_eq_mk, Ideal.Quotient.mk_eq_mk, Set.mem_univ,
+    IsLocalRing.residue, Set.mem_image, true_implies]
+  refine ⟨y, hy, ?_⟩
+  convert (Ideal.Quotient.mk_eq_mk_iff_sub_mem (I := 𝓂[K]) y x).mpr _
+  -- TODO: make Valued.maximalIdeal abbreviations instead of def
+  rw [Valued.maximalIdeal, hp.maximalIdeal_eq, ← SetLike.mem_coe,
+    (Valuation.integer.integers _).coe_span_singleton_eq_setOf_le_v_algebraMap]
+  simpa using hy'.le
+
+lemma totallyBounded_iff_finite_residueField [hv : (Valued.v : Valuation K Γ₀).RankOne]
     [IsDiscreteValuationRing 𝒪[K]] :
     TotallyBounded (Set.univ (α := 𝒪[K])) ↔ Finite 𝓀[K] := by
-  constructor
-  · intro H
-    obtain ⟨p, hp⟩ := IsDiscreteValuationRing.exists_irreducible 𝒪[K]
-    have := Metric.finite_approx_of_totallyBounded H ‖p‖ (norm_pos_iff.mpr hp.ne_zero)
-    simp only [Set.subset_univ, Set.univ_subset_iff, true_and] at this
-    obtain ⟨t, ht, ht'⟩ := this
-    rw [← Set.finite_univ_iff]
-    refine (ht.image (IsLocalRing.residue _)).subset ?_
-    rintro ⟨x⟩
-    replace ht' := ht'.ge (Set.mem_univ x)
-    simp only [Set.mem_iUnion, Metric.mem_ball, exists_prop] at ht'
-    obtain ⟨y, hy, hy'⟩ := ht'
-    simp only [Submodule.Quotient.quot_mk_eq_mk, Ideal.Quotient.mk_eq_mk, Set.mem_univ,
-      IsLocalRing.residue, Set.mem_image, true_implies]
-    refine ⟨y, hy, ?_⟩
-    convert (Ideal.Quotient.mk_eq_mk_iff_sub_mem (I := 𝓂[K]) y x).mpr _
-    -- TODO: make Valued.maximalIdeal abbreviations instead of def
-    rw [Valued.maximalIdeal, hp.maximalIdeal_eq, ← SetLike.mem_coe,
-      (Valuation.integer.integers _).coe_span_singleton_eq_setOf_le_v_algebraMap]
-    rw [dist_comm] at hy'
-    simpa [dist_eq_norm] using hy'.le
-  · intro H
-    rw [Metric.totallyBounded_iff]
-    intro ε εpos
+  have hb : (uniformity 𝒪[K]).HasBasis (fun _ ↦ True)
+      fun γ : Γ₀ˣ => { p : 𝒪[K] × 𝒪[K] | v (p.2 - p.1 : K) < (γ : Γ₀) } := by
+    rw [uniformity_subtype]
+    exact (hasBasis_uniformity _ _).comap _
+  refine ⟨fun H ↦ finite_residueField_of_totallyBounded_of_isDiscreteValuationRing H, fun H ↦ ?_⟩
+  · rw [hb.totallyBounded_iff]
+    intro ε _
     obtain ⟨p, hp⟩ := IsDiscreteValuationRing.exists_irreducible 𝒪[K]
     have hp' := Valuation.integer.v_irreducible_lt_one hp
-    obtain ⟨n, hn⟩ : ∃ n : ℕ, ‖(p : K)‖ ^ n < ε := exists_pow_lt_of_lt_one εpos
-      (toNormedField.norm_lt_one_iff.mpr hp')
-    have hF := finite_quotient_maximalIdeal_pow_of_finite_residueField H n
-    refine ⟨Quotient.out '' (Set.univ (α := 𝒪[K] ⧸ (𝓂[K] ^ n))), Set.toFinite _, ?_⟩
-    have : {y : 𝒪[K] | v (y : K) ≤ v (p : K) ^ n} = Metric.closedBall 0 (‖p‖ ^ n)  := by
-      ext
-      simp [← norm_pow]
-    simp only [Ideal.univ_eq_iUnion_image_add (𝓂[K] ^ n), hp.maximalIdeal_pow_eq_setOf_le_v_coe_pow,
-      this, AddSubgroupClass.coe_norm, Set.image_univ, Set.mem_range, Set.iUnion_exists,
-      Set.iUnion_iUnion_eq', Set.iUnion_subset_iff, Metric.vadd_closedBall, vadd_eq_add, add_zero]
-    intro
-    exact (Metric.closedBall_subset_ball hn).trans (Set.subset_iUnion_of_subset _ le_rfl)
+    by_cases hx : ∀ x : 𝒪[K], x ≠ 0 → ε < v (x : K)
+    · -- discrete case, should be disallowed by a different Valued topology
+      have : MulArchimedean Γ₀ := .comap hv.hom.toMonoidHom hv.strictMono
+      obtain ⟨n, hn⟩ := exists_pow_lt₀ hp' ε
+      absurd hn
+      simpa using (hx (p ^ n) (by simp [hp.ne_zero])).le
+    push_neg at hx
+    obtain ⟨x, hx, hx'⟩ := hx
+    obtain ⟨n, u, rfl⟩ := IsDiscreteValuationRing.eq_unit_mul_pow_irreducible hx hp
+    have hu : v (u.val : K) = 1 := (Valuation.integer.integers _).valuation_unit u
+    simp only [Subring.coe_mul, SubmonoidClass.coe_pow, map_mul, hu, map_pow, one_mul] at hx'
+    have hF := finite_quotient_maximalIdeal_pow_of_finite_residueField H (n + 1)
+    refine ⟨Quotient.out '' (Set.univ (α := 𝒪[K] ⧸ (𝓂[K] ^ (n + 1)))), Set.toFinite _, ?_⟩
+    simp only [Ideal.univ_eq_iUnion_image_add (𝓂[K] ^ (n + 1)),
+      hp.maximalIdeal_pow_eq_setOf_le_v_coe_pow, Set.image_univ, Set.mem_range, Set.iUnion_exists,
+      Set.iUnion_iUnion_eq', Set.iUnion_subset_iff]
+    intro i y
+    simp only [Set.mem_vadd_set, Set.mem_setOf_eq, vadd_eq_add, Subtype.exists, exists_and_left,
+      Set.mem_iUnion, forall_exists_index, and_imp]
+    rintro z hz hz' rfl
+    use i
+    simp only [Subring.coe_add, sub_add_cancel_left, Valuation.map_neg]
+    refine (hz.trans_lt ?_).trans_le hx'
+    exact pow_lt_pow_right_of_lt_one₀ (by simp [zero_lt_iff, hp.ne_zero]) hp' (by simp)
 
 end FiniteResidueField
 
@@ -312,14 +334,13 @@ lemma isDiscreteValuationRing_of_compactSpace [hn : (Valued.v : Valuation K Γ�
 end CompactDVR
 
 lemma compactSpace_iff_completeSpace_and_isDiscreteValuationRing_and_finite_residueField
-    [(Valued.v : Valuation K Γ₀).RankOne] :
+    [(Valued.v : Valuation K Γ₀).IsNontrivial] :
     CompactSpace 𝒪[K] ↔ CompleteSpace 𝒪[K] ∧ IsDiscreteValuationRing 𝒪[K] ∧ Finite 𝓀[K] := by
   refine ⟨fun h ↦ ?_, fun ⟨_, _, h⟩ ↦ ⟨?_⟩⟩
   · have : IsDiscreteValuationRing 𝒪[K] := isDiscreteValuationRing_of_compactSpace
     refine ⟨complete_of_compact, by assumption, ?_⟩
-    rw [← isCompact_univ_iff, isCompact_iff_totallyBounded_isComplete,
-        totallyBounded_iff_finite_residueField] at h
-    exact h.left
+    rw [← isCompact_univ_iff, isCompact_iff_totallyBounded_isComplete] at h
+    exact finite_residueField_of_totallyBounded_of_isDiscreteValuationRing h.left
   · rw [← totallyBounded_iff_finite_residueField] at h
     rw [isCompact_iff_totallyBounded_isComplete]
     exact ⟨h, completeSpace_iff_isComplete_univ.mp ‹_›⟩
